@@ -6,11 +6,6 @@ gocryptor is a tool designed to encrypt and decrypt executable files using symme
 
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Ethical Considerations](#ethical-considerations)
-- [License](#license)
-- [Contributing](#contributing)
-- [Disclaimer](#disclaimer)
 
 ## Features
 
