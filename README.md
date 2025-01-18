@@ -1,6 +1,6 @@
 # gocryptor
 
-gocryptor is a tool designed to encrypt and decrypt executable files using symmetric encryption (Fernet). It provides a way to protect sensitive executables from unauthorized access.
+gocryptor is a tool designed to encrypt and decrypt executable files using symmetric encryption (Fernet). It provides a way to protect sensitive executables from unauthorized access. I am not responsible for any misuse.
 
 ## Table of Contents
 
