@@ -139,7 +139,7 @@ func main() {
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: encryptor <path_to_payload>")
+		log.Fatal("Usage: gocryptor <path_to_payload>")
 	}
 
 	payloadPath := os.Args[1]
